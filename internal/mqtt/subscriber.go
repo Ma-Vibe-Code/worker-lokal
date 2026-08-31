@@ -57,13 +57,22 @@ func (s *Subscriber) Connect() error {
 
 	opts.SetOnConnectHandler(func(c mqtt.Client) {
 		log.Printf("[MQTT] Connected to broker %s successfully", s.cfg.MQTTBroker)
-		log.Printf("[MQTT] Subscribing to topic '%s' (QoS: 1)...", s.topic)
+		log.Printf("[MQTT] Subscribing to specific topic '%s' (QoS: 1)...", s.topic)
 
 		token := c.Subscribe(s.topic, 1, s.handleMessage)
 		if token.Wait() && token.Error() != nil {
 			log.Printf("[MQTT] Failed to subscribe to topic '%s': %v", s.topic, token.Error())
 		} else {
-			log.Printf("[MQTT] Subscribed to topic '%s' successfully", s.topic)
+			log.Printf("[MQTT] Subscribed to specific topic '%s' successfully", s.topic)
+		}
+
+		broadcastTopic := "workers/events"
+		log.Printf("[MQTT] Subscribing to broadcast topic '%s' (QoS: 1)...", broadcastTopic)
+		bToken := c.Subscribe(broadcastTopic, 1, s.handleMessage)
+		if bToken.Wait() && bToken.Error() != nil {
+			log.Printf("[MQTT] Failed to subscribe to broadcast topic '%s': %v", broadcastTopic, bToken.Error())
+		} else {
+			log.Printf("[MQTT] Subscribed to broadcast topic '%s' successfully", broadcastTopic)
 		}
 	})
 
@@ -91,7 +100,7 @@ func (s *Subscriber) Connect() error {
 func (s *Subscriber) Disconnect() {
 	if s.client != nil && s.client.IsConnected() {
 		log.Println("[MQTT] Disconnecting from broker...")
-		s.client.Unsubscribe(s.topic)
+		s.client.Unsubscribe(s.topic, "workers/events")
 		s.client.Disconnect(250)
 		log.Println("[MQTT] Disconnected cleanly.")
 	}
