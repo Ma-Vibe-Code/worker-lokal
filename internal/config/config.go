@@ -14,6 +14,8 @@ type Config struct {
 	WorkerID             string
 	APIBaseURL           string
 	APIAuthToken         string
+	APIKeyHeader         string
+	APIKey               string
 	MQTTBroker           string
 	MQTTClientID         string
 	MQTTUsername         string
@@ -40,6 +42,8 @@ func Load() (*Config, error) {
 	}
 
 	apiAuthToken := getEnv("API_AUTH_TOKEN", "")
+	apiKeyHeader := getEnv("API_KEY_HEADER", "x-api-key")
+	apiKey := getEnv("API_KEY", "")
 
 	mqttBroker := getEnv("MQTT_BROKER", "")
 	if mqttBroker == "" {
@@ -63,6 +67,8 @@ func Load() (*Config, error) {
 		WorkerID:             workerID,
 		APIBaseURL:           apiBaseURL,
 		APIAuthToken:         apiAuthToken,
+		APIKeyHeader:         apiKeyHeader,
+		APIKey:               apiKey,
 		MQTTBroker:           mqttBroker,
 		MQTTClientID:         mqttClientID,
 		MQTTUsername:         mqttUsername,

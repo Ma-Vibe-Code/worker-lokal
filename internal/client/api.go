@@ -38,6 +38,14 @@ func (c *APIClient) FetchCameras() ([]models.Camera, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Worker-ID", c.cfg.WorkerID)
 
+	if c.cfg.APIKey != "" {
+		headerName := c.cfg.APIKeyHeader
+		if headerName == "" {
+			headerName = "x-api-key"
+		}
+		req.Header.Set(headerName, c.cfg.APIKey)
+	}
+
 	if c.cfg.APIAuthToken != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.cfg.APIAuthToken))
 	}

@@ -27,6 +27,12 @@ func main() {
 
 	log.Printf("[MAIN] Worker ID     : %s", cfg.WorkerID)
 	log.Printf("[MAIN] API Base URL  : %s", cfg.APIBaseURL)
+	log.Printf("[MAIN] API Key Header: %s", cfg.APIKeyHeader)
+	if cfg.APIKey != "" {
+		log.Printf("[MAIN] API Key       : [CONFIGURED]")
+	} else {
+		log.Printf("[MAIN] API Key       : [NOT SET]")
+	}
 	log.Printf("[MAIN] MQTT Broker   : %s", cfg.MQTTBroker)
 	log.Printf("[MAIN] Client ID     : %s", cfg.MQTTClientID)
 	log.Printf("[MAIN] Retry Interval: %d second(s)", cfg.RetryIntervalSeconds)
