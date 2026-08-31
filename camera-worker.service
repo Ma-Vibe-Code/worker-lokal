@@ -1,0 +1,30 @@
+[Unit]
+Description=Lightweight Local RTSP-to-MediaMTX Stream Relay Worker
+Documentation=https://github.com/Ma-Vibe-Code/worker-lokal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/worker-lokal
+ExecStart=/opt/worker-lokal/worker
+Restart=always
+RestartSec=5s
+
+# Standard output and error logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=camera-worker
+
+# Resource limitations and environment
+EnvironmentFile=-/opt/worker-lokal/.env
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=15s
+
+# Low resource priority
+Nice=5
+
+[Install]
+WantedBy=multi-user.target
