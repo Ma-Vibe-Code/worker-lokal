@@ -14,24 +14,44 @@ Aplikasi relay video stream RTSP ke MediaMTX berbasis **Golang** yang sangat rin
 
 ---
 
+## 📖 Dokumentasi Lengkap Sistem
+
+Dokumentasi lengkap arsitektur, Goroutine concurrency, alur MQTT, telemetri, dan panduan deployment tersedia dalam format:
+- 📄 **Microsoft Word (`.docx`)**: **[DOKUMENTASI_WORKER_LOKAL.docx](file:///d:/code/kamera-waykambas/worker-lokal/DOKUMENTASI_WORKER_LOKAL.docx)** *(Format resmi siap cetak)*
+- 📑 **Markdown (`.md`)**: **[DOKUMENTASI_WORKER_LOKAL.md](file:///d:/code/kamera-waykambas/worker-lokal/DOKUMENTASI_WORKER_LOKAL.md)**
+
+---
+
 ## 📁 Struktur Project
 
 ```text
 worker-lokal/
 ├── cmd/
-├── internal/
-│   ├── client/          # REST API Client untuk bootstrap data kamera
-│   ├── config/          # Parser konfigurasi .env & environment variable
-│   ├── models/          # Definisi struct Camera, APIResponse, MQTT payloads
-│   ├── mqtt/            # MQTT Subscriber & Real-Time event handler
-│   └── streamer/        # FFmpeg Goroutine concurrency manager & retry loop
-├── .env.example         # Template konfigurasi environment
-├── camera-worker.service# Systemd service unit untuk Linux/Proxmox
-├── go.mod               # Definisi Go module
-├── go.sum               # Hash dependensi Go
-├── main.go              # Entry point aplikasi
-└── README.md            # Dokumentasi panduan instalasi & build
+│   └── worker/
+│       └── main.go              # Entrypoint utama (bootstrap, DI, server listener, shutdown)
+├── config/
+│   └── env.go                  # Type-safe Environment variable loader (.env)
+├── docs/                       # Swagger API Documentation (swagger.json, docs.go)
+├── pkg/
+│   ├── dto/                    # Data Transfer Objects (APIResponseDTO, MQTTEventPayloadDTO)
+│   ├── enum/                   # Konstanta Action MQTT (SYNC_ALL, UPSERT_CAMERA, REMOVE_CAMERA)
+│   ├── handler/
+│   │   ├── consumer/           # MQTT Message Consumer (CameraConsumer)
+│   │   ├── err/                # Global Fiber Error Handler
+│   │   ├── http/               # HTTP Handlers (HealthHandler telemetri)
+│   │   └── message_broker/     # Paho MQTT Client Wrapper & Connection Lifecycle
+│   ├── model/                  # Domain Models (Camera, HealthStatus, ApiResponse)
+│   ├── router/                 # Fiber Routes & Middleware Setup (CORS, Recover, Logger)
+│   ├── service/                # Business Logic (StreamManagerService, CameraClientService)
+│   └── utils/                  # Helper Response Formatter
+├── camera-worker.service       # Unit file Systemd untuk Linux / Proxmox
+├── DOKUMENTASI_WORKER_LOKAL.docx# Dokumen resmi format Microsoft Word
+├── DOKUMENTASI_WORKER_LOKAL.md # Dokumen format Markdown
+├── .env.example                # Template konfigurasi environment
+├── go.mod                      # Definisi Go Modules & Dependensi
+└── go.sum                      # Checksum dependensi Go
 ```
+
 
 ---
 

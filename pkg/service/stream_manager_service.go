@@ -148,8 +148,8 @@ func (sm *StreamManagerService) runCameraLoop(ctx context.Context, cam model.Cam
 	defer sm.wg.Done()
 
 	ffmpegPath := config.FFMPEG_PATH.GetValueOrDefault("ffmpeg")
-	retrySecs := 5
-	if strVal := config.RETRY_INTERVAL_SECONDS.GetValueOrDefault("5"); strVal != "" {
+	retrySecs := 3
+	if strVal := config.RETRY_INTERVAL_SECONDS.GetValueOrDefault("3"); strVal != "" {
 		if val, err := strconv.Atoi(strVal); err == nil && val > 0 {
 			retrySecs = val
 		}
@@ -168,10 +168,15 @@ func (sm *StreamManagerService) runCameraLoop(ctx context.Context, cam model.Cam
 		startTime := time.Now()
 		log.Infof("[STREAMER][%s] Launching FFmpeg relay subprocess...", cam.ID)
 
+		// Socket I/O timeout set to 5,000,000 microseconds (5 seconds)
+		// This ensures FFmpeg immediately exits if camera loses power or disconnects,
+		// allowing the retry loop to immediately reconnect when the camera turns back on.
 		args := []string{
 			"-hide_banner",
 			"-loglevel", "warning",
 			"-rtsp_transport", "tcp",
+			"-timeout", "5000000",
+			"-fflags", "+nobuffer+genpts+discardcorrupt",
 			"-i", cam.SourceURL,
 			"-c", "copy",
 			"-f", "rtsp",
