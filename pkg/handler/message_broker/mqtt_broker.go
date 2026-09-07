@@ -2,6 +2,7 @@ package message_broker
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -11,8 +12,16 @@ import (
 )
 
 // MQTTBroker wraps the underlying Paho MQTT client providing standard Consume/Publish helpers.
+type topicSubscription struct {
+	topic   string
+	qos     byte
+	handler mqtt.MessageHandler
+}
+
 type MQTTBroker struct {
-	client mqtt.Client
+	client        mqtt.Client
+	mu            sync.RWMutex
+	subscriptions map[string]topicSubscription
 }
 
 // DefaultMQTTBroker holds the singleton active broker instance.
@@ -28,6 +37,10 @@ func InitMQTTBroker() (*MQTTBroker, error) {
 
 	if brokerURI == "" {
 		return nil, fmt.Errorf("MQTT_BROKER is not configured")
+	}
+
+	broker := &MQTTBroker{
+		subscriptions: make(map[string]topicSubscription),
 	}
 
 	opts := mqtt.NewClientOptions()
@@ -47,6 +60,7 @@ func InitMQTTBroker() (*MQTTBroker, error) {
 
 	opts.SetOnConnectHandler(func(c mqtt.Client) {
 		log.Infof("[MQTT] Connected to broker %s successfully (ClientID: %s)", brokerURI, clientID)
+		broker.resubscribeAll()
 	})
 
 	opts.SetConnectionLostHandler(func(c mqtt.Client, err error) {
@@ -58,6 +72,7 @@ func InitMQTTBroker() (*MQTTBroker, error) {
 	})
 
 	client := mqtt.NewClient(opts)
+	broker.client = client
 	log.Infof("[MQTT] Connecting to broker %s (ClientID: %s)...", brokerURI, clientID)
 
 	token := client.Connect()
@@ -65,15 +80,43 @@ func InitMQTTBroker() (*MQTTBroker, error) {
 		return nil, fmt.Errorf("MQTT connection error: %w", token.Error())
 	}
 
-	broker := &MQTTBroker{client: client}
 	DefaultMQTTBroker = broker
 	return broker, nil
 }
 
+// resubscribeAll re-registers all tracked subscriptions on the active MQTT client.
+func (b *MQTTBroker) resubscribeAll() {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.client == nil || !b.client.IsConnected() {
+		return
+	}
+
+	for topic, sub := range b.subscriptions {
+		log.Infof("[MQTT] (Re)subscribing to topic '%s' (QoS: %d)...", topic, sub.qos)
+		token := b.client.Subscribe(sub.topic, sub.qos, sub.handler)
+		if token.Wait() && token.Error() != nil {
+			log.Errorf("[MQTT] Failed to (re)subscribe to topic '%s': %v", topic, token.Error())
+		} else {
+			log.Infof("[MQTT] Successfully subscribed to topic '%s'", topic)
+		}
+	}
+}
+
 // ConsumeMQTTTopic subscribes to a topic and routes incoming messages to the provided handler function.
 func (b *MQTTBroker) ConsumeMQTTTopic(topic string, qos byte, handler mqtt.MessageHandler) error {
+	b.mu.Lock()
+	b.subscriptions[topic] = topicSubscription{
+		topic:   topic,
+		qos:     qos,
+		handler: handler,
+	}
+	b.mu.Unlock()
+
 	if b.client == nil || !b.client.IsConnected() {
-		return fmt.Errorf("MQTT client is not connected")
+		log.Warnf("[MQTT] Client not connected yet. Topic '%s' registered for auto-subscription on connect.", topic)
+		return nil
 	}
 
 	log.Infof("[MQTT] Subscribing to topic '%s' (QoS: %d)...", topic, qos)
@@ -112,3 +155,4 @@ func (b *MQTTBroker) Disconnect() {
 		log.Info("[MQTT] MQTT client disconnected cleanly.")
 	}
 }
+

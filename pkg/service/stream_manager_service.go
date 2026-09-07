@@ -168,19 +168,25 @@ func (sm *StreamManagerService) runCameraLoop(ctx context.Context, cam model.Cam
 		startTime := time.Now()
 		log.Infof("[STREAMER][%s] Launching FFmpeg relay subprocess...", cam.ID)
 
-		// Socket I/O timeout set to 5,000,000 microseconds (5 seconds)
-		// This ensures FFmpeg immediately exits if camera loses power or disconnects,
-		// allowing the retry loop to immediately reconnect when the camera turns back on.
+		// Socket I/O timeout set to 10,000,000 microseconds (10 seconds)
+		// Provides sufficient time for camera RTSP handshake (OPTIONS -> DESCRIBE -> Digest Auth -> SETUP -> PLAY)
+		// while still ensuring FFmpeg terminates quickly if the camera loses power.
 		args := []string{
 			"-hide_banner",
 			"-loglevel", "warning",
 			"-rtsp_transport", "tcp",
-			"-timeout", "5000000",
+			"-timeout", "10000000",
 			"-fflags", "+nobuffer+genpts+discardcorrupt",
 			"-i", cam.SourceURL,
-			"-c", "copy",
+			"-map", "0:v:0",
+			"-map", "0:a?",
+			"-c:v", "copy",
+			"-c:a", "aac",
+			"-b:a", "64k",
+			"-ar", "44100",
 			"-f", "rtsp",
 			"-rtsp_transport", "tcp",
+			"-timeout", "10000000",
 			cam.TargetURL,
 		}
 
